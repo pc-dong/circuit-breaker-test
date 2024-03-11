@@ -1,0 +1,12 @@
+resilience4j.circuitbreaker:
+  instances:
+    test:
+      registerHealthIndicator: true
+      slidingWindowSize: 5
+      slowCallDurationThreshold: 2s
+      slowCallRateThreshold: 10
+
+resilience4j.timelimiter:
+  instances:
+    test:
+      timeoutDuration: 3s
