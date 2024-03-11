@@ -1,0 +1,1 @@
+# Example of Spring Cloud Circuit Breaker
