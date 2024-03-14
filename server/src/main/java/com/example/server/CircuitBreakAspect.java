@@ -1,6 +1,7 @@
 package com.example.server;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +20,8 @@ import reactor.core.publisher.Mono;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.util.List;
+import java.util.function.Function;
 
 @Aspect
 @Component
@@ -26,69 +29,98 @@ import java.lang.reflect.Type;
 @RequiredArgsConstructor
 public class CircuitBreakAspect {
     private final ReactiveCircuitBreakerFactory cbFactory;
+    private final ObjectMapper objectMapper;
     private final CircuitBreakProperties circuitBreakProperties;
-
 
     @Around(value = "annotationOfAnyCircuitBreak(circuitBreak) && executionOfAnyMonoMethod()", argNames = "joinPoint,circuitBreak")
     final Object aroundMono(final ProceedingJoinPoint joinPoint, CircuitBreak circuitBreak) throws Throwable {
-
-        if (circuitBreakProperties.getDegradeGroups().contains(circuitBreak.group())
-                || circuitBreakProperties.getDegradeGroups().contains(circuitBreak.value())) {
+        Function<Throwable, Mono<Object>> callback = getMonoCallback(joinPoint, circuitBreak);
+        if (circuitBreakProperties.inEffect()
+                &&
+                (circuitBreakProperties.getDegradeGroups().contains(circuitBreak.group())
+                        || circuitBreakProperties.getDegradeGroups().contains(circuitBreak.value()))) {
             log.info("Degraded: group=" + circuitBreak.group() + ", value=" + circuitBreak.value());
-            return Mono.error(new RuntimeException("Degrade"));
+            return null == callback ? Mono.error(new RuntimeException("Degrade"))
+                    : callback.apply(new RuntimeException("Degrade"));
         }
 
         if (!circuitBreakProperties.isEnabled()) {
             return joinPoint.proceed();
         }
 
+        ReactiveCircuitBreaker breaker = getReactiveCircuitBreaker(circuitBreak);
+        return callback == null ?  breaker.run((Mono) joinPoint.proceed())
+                : breaker.run((Mono) joinPoint.proceed(), callback);
+    }
 
-        ReactiveCircuitBreaker breaker;
-        if (StringUtils.hasLength(circuitBreak.group())) {
-            breaker = cbFactory.create(circuitBreak.value(), circuitBreak.group());
-        }
-
-        breaker = cbFactory.create(circuitBreak.value());
-
+    private Function<Throwable, Mono<Object>> getMonoCallback(ProceedingJoinPoint joinPoint, CircuitBreak circuitBreak) throws ClassNotFoundException {
+        Function<Throwable, Mono<Object>> callback = null;
         if (StringUtils.hasLength(circuitBreak.fallback())) {
             MethodSignature signature = (MethodSignature) joinPoint.getSignature();
             Method method = signature.getMethod();
             Type type = ((ParameterizedType) method.getGenericReturnType()).getActualTypeArguments()[0];
             Class<?> aClass = Class.forName(type.getTypeName());
 
-            return breaker.run((Mono) joinPoint.proceed(), (throwable) -> {
+            callback = (throwable) -> {
                 try {
                     return switch (aClass.getSimpleName()) {
                         case "String" -> Mono.just(circuitBreak.fallback());
                         case "Integer" -> Mono.just(Integer.valueOf(circuitBreak.fallback()));
                         case "Boolean" -> Mono.just(Boolean.valueOf(circuitBreak.fallback()));
-                        default -> Mono.just(new ObjectMapper().readValue(circuitBreak.fallback(), aClass));
+                        default -> Mono.just(objectMapper.readValue(circuitBreak.fallback(), aClass));
                     };
                 } catch (JsonProcessingException e) {
                     return Mono.error(e);
                 }
-            });
+            };
         }
-        return breaker.run((Mono) joinPoint.proceed());
+        return callback;
+    }
+
+    private ReactiveCircuitBreaker getReactiveCircuitBreaker(CircuitBreak circuitBreak) {
+        ReactiveCircuitBreaker breaker;
+        if (StringUtils.hasLength(circuitBreak.group())) {
+            breaker = cbFactory.create(circuitBreak.value(), circuitBreak.group());
+        } else {
+            breaker = cbFactory.create(circuitBreak.value());
+        }
+        return breaker;
     }
 
     @Around(value = "annotationOfAnyCircuitBreak(circuitBreak) && executionOfAnyFluxMethod()", argNames = "joinPoint,circuitBreak")
     final Object aroundFlux(final ProceedingJoinPoint joinPoint, CircuitBreak circuitBreak) throws Throwable {
-        if (circuitBreakProperties.getDegradeGroups().contains(circuitBreak.group())
-                || circuitBreakProperties.getDegradeGroups().contains(circuitBreak.value())) {
+        Function<Throwable, Flux<Object>> callback = getFluxCallback(circuitBreak);
+        if (circuitBreakProperties.inEffect()
+                &&
+                (circuitBreakProperties.getDegradeGroups().contains(circuitBreak.group())
+                        || circuitBreakProperties.getDegradeGroups().contains(circuitBreak.value()))) {
             log.info("Degraded: group=" + circuitBreak.group() + ", value=" + circuitBreak.value());
-            return Flux.error(new RuntimeException("Degrade"));
+            return null == callback ? Flux.error(new RuntimeException("Degrade"))
+                    : callback.apply(new RuntimeException("Degrade"));
         }
 
         if (!circuitBreakProperties.isEnabled()) {
             return joinPoint.proceed();
         }
 
-        if (StringUtils.hasLength(circuitBreak.group())) {
-            return cbFactory.create(circuitBreak.value(), circuitBreak.group()).run((Flux) joinPoint.proceed());
-        }
+        ReactiveCircuitBreaker breaker = getReactiveCircuitBreaker(circuitBreak);
+        return null == callback ? breaker.run((Flux) joinPoint.proceed())
+                : breaker.run((Flux) joinPoint.proceed(), callback);
+    }
 
-        return cbFactory.create(circuitBreak.value()).run((Flux) joinPoint.proceed());
+    private Function<Throwable, Flux<Object>> getFluxCallback(CircuitBreak circuitBreak) {
+        Function<Throwable, Flux<Object>> callback = null;
+        if (StringUtils.hasLength(circuitBreak.fallback())) {
+            callback = (throwable) -> {
+                try {
+                    return Flux.fromIterable(objectMapper.readValue(circuitBreak.fallback(), new TypeReference<List<Object>>() {
+                    }));
+                } catch (JsonProcessingException e) {
+                    return Flux.error(e);
+                }
+            };
+        }
+        return callback;
     }
 
     @Pointcut("@annotation(circuitBreak)")

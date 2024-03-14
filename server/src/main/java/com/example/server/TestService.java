@@ -19,17 +19,15 @@ public class TestService {
         return webClient.get()
                 .uri("/test/" + seconds)
                 .retrieve()
-                .bodyToMono(String.class)
-                .onErrorReturn("Fallback");
+                .bodyToMono(String.class);
     }
 
-    @CircuitBreak(value = "test2", group = "oms")
-    public Mono<String> test2(int seconds) {
+    @CircuitBreak(value = "test2", group = "oms", fallback = "[{\"message\":\"testFallback2\"}]")
+    public Flux<Response> test2(int seconds) {
         return webClient.get()
                 .uri("/test2/" + seconds)
                 .retrieve()
-                .bodyToMono(String.class)
-                .onErrorReturn("Fallback");
+                .bodyToFlux(Response.class);
     }
 
 

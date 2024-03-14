@@ -16,6 +16,8 @@ resilience4j.timelimiter:
 circuit-breaker:
   degradeGroups:
     - test2
+  startTime: 2024-02-28T00:00:00
+  endTime: 2024-04-30T23:59:59
 logging:
   level:
     root: INFO
