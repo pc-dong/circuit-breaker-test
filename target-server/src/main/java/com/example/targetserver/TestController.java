@@ -12,4 +12,10 @@ public class TestController {
         return Mono.just("Hello, World!")
                 .delayElement(java.time.Duration.ofSeconds(seconds));
     }
+
+    @GetMapping("/test2/{seconds}")
+    public Mono<String> test2(@PathVariable int seconds) {
+        return Mono.just("Hello, World 2!")
+                .delayElement(java.time.Duration.ofSeconds(seconds));
+    }
 }

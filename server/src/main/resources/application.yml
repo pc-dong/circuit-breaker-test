@@ -1,12 +1,22 @@
 resilience4j.circuitbreaker:
   instances:
-    test:
+    oms:
       registerHealthIndicator: true
       slidingWindowSize: 5
       slowCallDurationThreshold: 2s
       slowCallRateThreshold: 10
 
+
+
 resilience4j.timelimiter:
   instances:
-    test:
+    oms:
       timeoutDuration: 3s
+
+circuit-breaker:
+  degradeGroups:
+    - test2
+logging:
+  level:
+    root: INFO
+    io.github.resilience4j: DEBUG

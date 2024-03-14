@@ -13,6 +13,12 @@ public class TestController {
 
     @GetMapping("/test/{seconds}")
     public Mono<String> test(@PathVariable int seconds) {
-        return testService.test(seconds);
+        return testService.test(seconds)
+                .onErrorReturn("Fallback");
+    }
+
+    @GetMapping("/test2/{seconds}")
+    public Mono<String> test2(@PathVariable int seconds) {
+        return testService.test2(seconds).onErrorReturn("Fallback");
     }
 }
