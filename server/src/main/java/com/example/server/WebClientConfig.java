@@ -27,4 +27,19 @@ public class WebClientConfig {
                 .circuitBreakerConfig(CircuitBreakerConfig.ofDefaults())
                 .timeLimiterConfig(TimeLimiterConfig.custom().timeoutDuration(Duration.ofSeconds(4)).build()).build());
     }
+
+
+
+
+//    @Bean
+//    public CircuitBreakerConfigCustomizer circuitBreakerCustomizer() {
+//         return CircuitBreakerConfigCustomizer
+//                .of("backendA", builder -> builder.slidingWindowSize(10));
+//    }
+//
+//    @Bean
+//    public TimeLimiterConfigCustomizer timeLimiterCustomizer() {
+//        return TimeLimiterConfigCustomizer
+//                .of("backendA", builder -> builder.timeoutDuration(Duration.ofSeconds(3)));
+//    }
 }

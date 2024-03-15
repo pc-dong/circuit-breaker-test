@@ -5,19 +5,26 @@ resilience4j.circuitbreaker:
       slidingWindowSize: 5
       slowCallDurationThreshold: 2s
       slowCallRateThreshold: 10
-
+#    backendA:
+#      registerHealthIndicator: true
+#      slidingWindowSize: 5
+#      slowCallDurationThreshold: 2s
+#      slowCallRateThreshold: 10
 
 
 resilience4j.timelimiter:
   instances:
     oms:
       timeoutDuration: 3s
+#    backendA:
+#      timeoutDuration: 3s
+
 
 circuit-breaker:
   degradeGroups:
-    - test2
-  startTime: 2024-02-28T00:00:00
-  endTime: 2024-04-30T23:59:59
+#    - test2
+#  startTime: 2024-02-28T00:00:00
+#  endTime: 2024-04-30T23:59:59
 logging:
   level:
     root: INFO

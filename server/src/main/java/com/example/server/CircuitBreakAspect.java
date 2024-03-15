@@ -3,6 +3,8 @@ package com.example.server;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.github.resilience4j.core.RegistryStore;
+import io.github.resilience4j.core.registry.InMemoryRegistryStore;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -31,6 +33,7 @@ public class CircuitBreakAspect {
     private final ReactiveCircuitBreakerFactory cbFactory;
     private final ObjectMapper objectMapper;
     private final CircuitBreakProperties circuitBreakProperties;
+    private final RegistryStore<ReactiveCircuitBreaker> registryStore = new InMemoryRegistryStore<>();
 
     @Around(value = "annotationOfAnyCircuitBreak(circuitBreak) && executionOfAnyMonoMethod()", argNames = "joinPoint,circuitBreak")
     final Object aroundMono(final ProceedingJoinPoint joinPoint, CircuitBreak circuitBreak) throws Throwable {
@@ -49,7 +52,7 @@ public class CircuitBreakAspect {
         }
 
         ReactiveCircuitBreaker breaker = getReactiveCircuitBreaker(circuitBreak);
-        return callback == null ?  breaker.run((Mono) joinPoint.proceed())
+        return callback == null ? breaker.run((Mono) joinPoint.proceed())
                 : breaker.run((Mono) joinPoint.proceed(), callback);
     }
 
@@ -78,13 +81,15 @@ public class CircuitBreakAspect {
     }
 
     private ReactiveCircuitBreaker getReactiveCircuitBreaker(CircuitBreak circuitBreak) {
-        ReactiveCircuitBreaker breaker;
-        if (StringUtils.hasLength(circuitBreak.group())) {
-            breaker = cbFactory.create(circuitBreak.value(), circuitBreak.group());
-        } else {
-            breaker = cbFactory.create(circuitBreak.value());
-        }
-        return breaker;
+        return registryStore.computeIfAbsent(circuitBreak.value() + "#" + circuitBreak.group(),
+                key -> {
+                    log.info(circuitBreak.value() + "#" + circuitBreak.group());
+                    if (StringUtils.hasLength(circuitBreak.group())) {
+                        return cbFactory.create(circuitBreak.value(), circuitBreak.group());
+                    }
+
+                    return cbFactory.create(circuitBreak.value());
+                });
     }
 
     @Around(value = "annotationOfAnyCircuitBreak(circuitBreak) && executionOfAnyFluxMethod()", argNames = "joinPoint,circuitBreak")
