@@ -1,3 +1,6 @@
+spring:
+  application:
+    name: resilience4j-demo
 resilience4j.circuitbreaker:
   instances:
     oms:
@@ -18,6 +21,23 @@ resilience4j.timelimiter:
       timeoutDuration: 3s
 #    backendA:
 #      timeoutDuration: 3s
+
+management.endpoints.web.exposure.include: '*'
+management.endpoint.health.show-details: always
+
+management.health.diskspace.enabled: false
+management.health.circuitbreakers.enabled: true
+management.health.ratelimiters.enabled: false
+
+info:
+  name: ${spring.application.name}
+  description: resilience4j demo
+  environment: ${spring.profiles.active}
+  version: 0.0.1
+
+management.metrics.tags.application: ${spring.application.name}
+management.metrics.distribution.percentiles-histogram.http.server.requests: true
+management.metrics.distribution.percentiles-histogram.resilience4j.circuitbreaker.calls: true
 
 
 circuit-breaker:
