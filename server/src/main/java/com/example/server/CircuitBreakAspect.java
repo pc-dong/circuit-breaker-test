@@ -38,6 +38,7 @@ public class CircuitBreakAspect {
     @Around(value = "annotationOfAnyCircuitBreak(circuitBreak) && executionOfAnyMonoMethod()", argNames = "joinPoint,circuitBreak")
     final Object aroundMono(final ProceedingJoinPoint joinPoint, CircuitBreak circuitBreak) throws Throwable {
         Function<Throwable, Mono<Object>> callback = getMonoCallback(joinPoint, circuitBreak);
+        // 主动降级
         if (circuitBreakProperties.inEffect()
                 &&
                 (circuitBreakProperties.getDegradeGroups().contains(circuitBreak.group())
@@ -47,10 +48,12 @@ public class CircuitBreakAspect {
                     : callback.apply(new RuntimeException("Degrade"));
         }
 
+        // 被动降级开关
         if (!circuitBreakProperties.isEnabled()) {
             return joinPoint.proceed();
         }
 
+        // 被动降级
         ReactiveCircuitBreaker breaker = getReactiveCircuitBreaker(circuitBreak);
         return callback == null ? breaker.run((Mono) joinPoint.proceed())
                 : breaker.run((Mono) joinPoint.proceed(), callback);

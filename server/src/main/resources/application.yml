@@ -1,6 +1,19 @@
 spring:
   application:
     name: resilience4j-demo
+  config:
+    import:
+      - nacos:server
+  cloud:
+    nacos:
+      config:
+        enabled: true
+        server-addr: http://localhost:8848
+#        username: xiqi
+#        password: xiqi
+        group: DEFAULT_GROUP
+        namespace: public
+        file-extension: yaml
 resilience4j.circuitbreaker:
   instances:
     oms:
@@ -15,10 +28,10 @@ resilience4j.circuitbreaker:
 #      slowCallRateThreshold: 10
 
 
-resilience4j.timelimiter:
-  instances:
-    oms:
-      timeoutDuration: 3s
+#resilience4j.timelimiter:
+#  instances:
+#    oms:
+#      timeoutDuration: 3s
 #    backendA:
 #      timeoutDuration: 3s
 
