@@ -4,6 +4,7 @@ spring:
   config:
     import:
       - nacos:server
+      - nacos:resilience4j
   cloud:
     nacos:
       config:
@@ -14,13 +15,13 @@ spring:
         group: DEFAULT_GROUP
         namespace: public
         file-extension: yaml
-resilience4j.circuitbreaker:
-  instances:
-    oms:
-      registerHealthIndicator: true
-      slidingWindowSize: 5
-      slowCallDurationThreshold: 2s
-      slowCallRateThreshold: 10
+#resilience4j.circuitbreaker:
+#  instances:
+#    oms:
+#      registerHealthIndicator: true
+#      slidingWindowSize: 5
+#      slowCallDurationThreshold: 2s
+#      slowCallRateThreshold: 10
 #    backendA:
 #      registerHealthIndicator: true
 #      slidingWindowSize: 5
